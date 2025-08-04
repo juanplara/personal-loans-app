@@ -6,11 +6,18 @@ const {
   calcularTotalAPagar
 } = require('../utils/loanCalculator');
 
+const validateLoanData = require('../utils/validateLoanData');
+
 const tasaEAnual = 0.0925; // Puedes leer esto desde el .env también
 const tasaDiaria = calcularTasaDiaria(tasaEAnual);
 
 const crearPrestamo = async (req, res) => {
   try {
+    const error = validateLoanData(req.body);
+    if (error) {
+      return res.status(400).json({ error });
+    }
+
     const { amount, reason, startDate, endDate, accountBalanceAtLoan, interestExtra = 0 } = req.body;
 
     const dias = calcularDias(new Date(startDate), new Date(endDate));
@@ -25,7 +32,8 @@ const crearPrestamo = async (req, res) => {
       accountBalanceAtLoan,
       interestLost: interesPerdido,
       interestExtra,
-      totalToPay
+      totalToPay,
+      user: req.user._id // esto si ya estás protegiendo la ruta
     });
 
     await nuevoPrestamo.save();
