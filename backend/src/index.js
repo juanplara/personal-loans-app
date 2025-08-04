@@ -2,11 +2,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const loanRoutes = require('./routes/loanRoutes'); // ✅ Importación
+
+const loanRoutes = require('./routes/loanRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 dotenv.config();
 
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 
 // Middlewares
@@ -14,7 +17,9 @@ app.use(cors());
 app.use(express.json());
 
 // Rutas
-app.use('/api/loans', loanRoutes); // ✅ Conexión de rutas
+app.use('/api/auth', authRoutes);
+app.use('/api/loans', loanRoutes);
+
 app.get('/', (req, res) => {
   res.send('API de Control de Préstamos funcionando ✅');
 });
