@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const loanSchema = new mongoose.Schema({
   amount: {
     type: Number,
-    required: true
+    required: true,
+    min: [1, 'El monto debe ser mayor a 0']
   },
   reason: {
     type: String,
@@ -18,13 +19,16 @@ const loanSchema = new mongoose.Schema({
   },
   accountBalanceAtLoan: {
     type: Number,
-    required: true
+    required: true,
+    min: [0, 'El saldo no puede ser negativo']
   },
   interestLost: {
     type: Number
   },
   interestExtra: {
-    type: Number
+    type: Number,
+    default: 0,
+    min: [0, 'El interés extra no puede ser negativo']
   },
   totalToPay: {
     type: Number
