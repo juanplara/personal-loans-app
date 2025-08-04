@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const loanRoutes = require('./routes/loanRoutes'); // ✅ Importación
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 // Rutas
+app.use('/api/loans', loanRoutes); // ✅ Conexión de rutas
 app.get('/', (req, res) => {
   res.send('API de Control de Préstamos funcionando ✅');
 });
