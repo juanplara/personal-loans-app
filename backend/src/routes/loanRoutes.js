@@ -9,6 +9,11 @@ const {
     obtenerEstadisticasPrestamos
 } = require('../controllers/loanController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const { exportCSV } = require('../controllers/exportController');
+
+// Rutas fijas
+router.get('/stats', authMiddleware, obtenerEstadisticasPrestamos);     // Estadísticas de prestamos
+router.get('/export/csv', authMiddleware, exportCSV);           // Exportar CSV
 
 // Todas las rutas están protegidas por autenticación
 router.post('/', authMiddleware, crearPrestamo);                // Crear préstamo
@@ -16,6 +21,5 @@ router.get('/', authMiddleware, obtenerPrestamos);              // Obtener todos
 router.get('/:id', authMiddleware, obtenerPrestamo);            // Obtener préstamo específico
 router.put('/:id', authMiddleware, actualizarPrestamo);         // Actualizar préstamo
 router.delete('/:id', authMiddleware, eliminarPrestamo);        // Eliminar préstamo
-router.get('/stats', authMiddleware, obtenerEstadisticasPrestamos);     // Estadísticas de prestamos
 
 module.exports = router;
