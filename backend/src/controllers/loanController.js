@@ -62,10 +62,41 @@ const crearPrestamo = async (req, res) => {
   }
 };
 
-// Obtener todos los préstamos del usuario
+// Obtener todos los préstamos del usuario con filtros
 const obtenerPrestamos = async (req, res) => {
   try {
-    const prestamos = await Loan.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const { startDateFrom, startDateTo, reason, minAmount, maxAmount } = req.query;
+
+    const query = { user: req.user.id };
+
+    // Filtrar por rango de fechas de inicio
+    if (startDateFrom || startDateTo) {
+      query.startDate = {};
+      if (startDateFrom) {
+        query.startDate.$gte = new Date(startDateFrom);
+      }
+      if (startDateTo) {
+        query.startDate.$lte = new Date(startDateTo);
+      }
+    }
+
+    // Filtrar por motivo (texto parcial, sin mayúsculas)
+    if (reason) {
+      query.reason = { $regex: reason, $options: 'i' };
+    }
+
+    // Filtrar por rango de montos
+    if (minAmount || maxAmount) {
+      query.amount = {};
+      if (minAmount) {
+        query.amount.$gte = Number(minAmount);
+      }
+      if (maxAmount) {
+        query.amount.$lte = Number(maxAmount);
+      }
+    }
+
+    const prestamos = await Loan.find(query).sort({ createdAt: -1 });
     res.json(prestamos);
   } catch (error) {
     console.error('Error al obtener préstamos:', error);
