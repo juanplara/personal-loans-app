@@ -62,42 +62,71 @@ const crearPrestamo = async (req, res) => {
   }
 };
 
-// Obtener todos los préstamos del usuario con filtros
+// Obtener todos los préstamos del usuario con filtros, ordenamiento y paginación
 const obtenerPrestamos = async (req, res) => {
   try {
-    const { startDateFrom, startDateTo, reason, minAmount, maxAmount } = req.query;
+    const {
+      startDateFrom,
+      startDateTo,
+      reason,
+      minAmount,
+      maxAmount,
+      sortBy,
+      order,
+      page = 1,
+      limit = 10
+    } = req.query;
 
     const query = { user: req.user.id };
 
-    // Filtrar por rango de fechas de inicio
+    // Filtros
     if (startDateFrom || startDateTo) {
       query.startDate = {};
-      if (startDateFrom) {
-        query.startDate.$gte = new Date(startDateFrom);
-      }
-      if (startDateTo) {
-        query.startDate.$lte = new Date(startDateTo);
-      }
+      if (startDateFrom) query.startDate.$gte = new Date(startDateFrom);
+      if (startDateTo) query.startDate.$lte = new Date(startDateTo);
     }
 
-    // Filtrar por motivo (texto parcial, sin mayúsculas)
     if (reason) {
       query.reason = { $regex: reason, $options: 'i' };
     }
 
-    // Filtrar por rango de montos
     if (minAmount || maxAmount) {
       query.amount = {};
-      if (minAmount) {
-        query.amount.$gte = Number(minAmount);
-      }
-      if (maxAmount) {
-        query.amount.$lte = Number(maxAmount);
-      }
+      if (minAmount) query.amount.$gte = Number(minAmount);
+      if (maxAmount) query.amount.$lte = Number(maxAmount);
     }
 
-    const prestamos = await Loan.find(query).sort({ createdAt: -1 });
-    res.json(prestamos);
+    if (req.query.isActive !== undefined) {
+      const now = new Date();
+      const isActive = req.query.isActive === 'true';
+      query.endDate = isActive ? { $gte: now } : { $lt: now };
+    }
+
+    // Ordenamiento
+    const allowedSortFields = ['amount', 'startDate', 'endDate', 'createdAt', 'totalToPay'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order === 'asc' ? 1 : -1;
+
+    // Paginación
+    const pageNumber = parseInt(page);
+    const pageSize = parseInt(limit);
+    const skip = (pageNumber - 1) * pageSize;
+
+    // Obtener total para info de paginación
+    const total = await Loan.countDocuments(query);
+
+    const prestamos = await Loan.find(query)
+      .sort({ [sortField]: sortOrder })
+      .skip(skip)
+      .limit(pageSize);
+
+    res.json({
+      total,
+      page: pageNumber,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+      prestamos
+    });
   } catch (error) {
     console.error('Error al obtener préstamos:', error);
     res.status(500).json({ message: 'Error al obtener préstamos' });
@@ -154,10 +183,46 @@ const eliminarPrestamo = async (req, res) => {
   }
 };
 
+// Estadísticas de prestamos
+const obtenerEstadisticasPrestamos = async (req, res) => {
+  try {
+    const stats = await Loan.aggregate([
+      { $match: { user: req.user._id } },
+      {
+        $group: {
+          _id: null,
+          totalLoans: { $sum: 1 },
+          totalAmount: { $sum: '$amount' },
+          totalInterestLost: { $sum: '$interestLost' },
+          totalInterestExtra: { $sum: '$interestExtra' },
+          totalToPay: { $sum: '$totalToPay' }
+        }
+      }
+    ]);
+
+    if (stats.length === 0) {
+      return res.json({
+        totalLoans: 0,
+        totalAmount: 0,
+        totalInterestLost: 0,
+        totalInterestExtra: 0,
+        totalToPay: 0
+      });
+    }
+
+    res.json(stats[0]);
+  } catch (error) {
+    console.error('Error al obtener estadísticas:', error);
+    res.status(500).json({ message: 'Error al obtener estadísticas' });
+  }
+};
+
+
 module.exports = {
   crearPrestamo,
   obtenerPrestamos,
   obtenerPrestamo,
   actualizarPrestamo,
-  eliminarPrestamo
+  eliminarPrestamo,
+  obtenerEstadisticasPrestamos
 };

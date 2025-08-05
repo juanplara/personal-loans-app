@@ -5,7 +5,8 @@ const {
     obtenerPrestamos,
     obtenerPrestamo,
     actualizarPrestamo,
-    eliminarPrestamo
+    eliminarPrestamo,
+    obtenerEstadisticasPrestamos
 } = require('../controllers/loanController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
@@ -15,5 +16,6 @@ router.get('/', authMiddleware, obtenerPrestamos);              // Obtener todos
 router.get('/:id', authMiddleware, obtenerPrestamo);            // Obtener préstamo específico
 router.put('/:id', authMiddleware, actualizarPrestamo);         // Actualizar préstamo
 router.delete('/:id', authMiddleware, eliminarPrestamo);        // Eliminar préstamo
+router.get('/stats', authMiddleware, obtenerEstadisticasPrestamos);     // Estadísticas de prestamos
 
 module.exports = router;
