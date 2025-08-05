@@ -24,6 +24,18 @@ app.get('/', (req, res) => {
   res.send('API de Control de Préstamos funcionando ✅');
 });
 
+// Middleware para rutas no encontradas (404)
+app.use((req, res, next) => {
+  const error = new Error(`No se encontró la ruta: ${req.originalUrl}`);
+  error.statusCode = 404;
+  next(error);
+});
+
+// Manejo centralizado de errores
+const errorHandler = require('./middlewares/errorMiddleware');
+app.use(errorHandler);
+
+
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,

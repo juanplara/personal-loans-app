@@ -157,7 +157,9 @@ const actualizarPrestamo = async (req, res) => {
     );
 
     if (!prestamo) {
-      return res.status(404).json({ message: 'Préstamo no encontrado' });
+      const error = new Error('Préstamo no encontrado');
+      error.statusCode = 404;
+      throw error;
     }
 
     res.json(prestamo);
