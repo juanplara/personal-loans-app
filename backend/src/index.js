@@ -7,19 +7,21 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
+const xss = require('xss');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
-// 📄 Rutas
+// 📄 Importar rutas
 const loanRoutes = require('./routes/loanRoutes');
 const authRoutes = require('./routes/authRoutes');
 
-// 🛡️ Middleware personalizado
+// 🛡️ Importar middlewares personalizados
 const errorHandler = require('./middlewares/errorMiddleware');
 
 // 📁 Cargar variables de entorno
 dotenv.config();
 
-// 🚀 Inicializar app
+// 🚀 Inicializar aplicación
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -37,16 +39,29 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Sanitizar datos contra NoSQL injection
-app.use(mongoSanitize());
-
-// Limpiar entrada de scripts maliciosos (XSS)
-app.use(xss());
+// Limpiar entrada de scripts maliciosos (XSS) usando librería xss
+app.use((req, res, next) => {
+  const sanitize = (obj) => {
+    for (let key in obj) {
+      if (typeof obj[key] === 'string') {
+        obj[key] = xss(obj[key]);
+      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+        sanitize(obj[key]);
+      }
+    }
+  };
+  
+  if (req.body) sanitize(req.body);
+  if (req.query) sanitize(req.query);
+  if (req.params) sanitize(req.params);
+  
+  next();
+});
 
 // ─────────────────────────────────────────────────────────────
 // 🔧 Middlewares generales
 
-app.use(cors()); // Habilitar CORS (actualmente abierto)
+app.use(cors()); // Habilitar CORS (actualmente abierto a todos)
 app.use(express.json()); // Parsear JSON en solicitudes
 
 // ─────────────────────────────────────────────────────────────
@@ -54,6 +69,7 @@ app.use(express.json()); // Parsear JSON en solicitudes
 
 app.use('/api/auth', authRoutes);
 app.use('/api/loans', loanRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Ruta base de prueba
 app.get('/', (req, res) => {

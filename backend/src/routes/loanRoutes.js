@@ -1,5 +1,13 @@
+// ==========================================
+// loanRoutes.js
+// Rutas relacionadas con la gestión de préstamos
+// ==========================================
+
+// Importaciones de dependencias
 const express = require('express');
 const router = express.Router();
+
+// Importación de controladores
 const {
     crearPrestamo,
     obtenerPrestamos,
@@ -8,19 +16,47 @@ const {
     eliminarPrestamo,
     obtenerEstadisticasPrestamos
 } = require('../controllers/loanController');
-const authMiddleware = require('../middlewares/authMiddleware');
+
 const { exportCSV } = require('../controllers/exportController');
-const { validarPrestamo } = require('../middlewares/validations/loanValidation');
 
-// Rutas fijas
-router.get('/stats', authMiddleware, obtenerEstadisticasPrestamos);     // Estadísticas de prestamos
-router.get('/export/csv', authMiddleware, exportCSV);           // Exportar CSV
+// Importación de middlewares
+const authMiddleware = require('../middlewares/authMiddleware'); // Verifica token JWT
+const { validarPrestamo } = require('../middlewares/validations/loanValidation'); // Validación de datos
 
-// Todas las rutas están protegidas por autenticación
-router.post('/', authMiddleware, validarPrestamo, crearPrestamo);                // Crear préstamo
-router.get('/', authMiddleware, obtenerPrestamos);              // Obtener todos los préstamos del usuario
-router.get('/:id', authMiddleware, obtenerPrestamo);            // Obtener préstamo específico
-router.put('/:id', authMiddleware, validarPrestamo, actualizarPrestamo);         // Actualizar préstamo
-router.delete('/:id', authMiddleware, eliminarPrestamo);        // Eliminar préstamo
+// ==========================================
+// Rutas fijas (acciones específicas)
+// ==========================================
 
+// 📊 Obtener estadísticas de préstamos del usuario autenticado
+// Ejemplo: GET /api/loans/stats
+router.get('/stats', authMiddleware, obtenerEstadisticasPrestamos);
+
+// 📂 Exportar préstamos a formato CSV
+// Ejemplo: GET /api/loans/export/csv
+router.get('/export/csv', authMiddleware, exportCSV);
+
+// ==========================================
+// Rutas CRUD protegidas por autenticación
+// ==========================================
+
+// ➕ Crear un nuevo préstamo
+// Validaciones incluidas antes de llegar al controlador
+router.post('/', authMiddleware, validarPrestamo, crearPrestamo);
+
+// 📋 Obtener todos los préstamos del usuario autenticado
+router.get('/', authMiddleware, obtenerPrestamos);
+
+// 🔍 Obtener un préstamo específico por ID
+router.get('/:id', authMiddleware, obtenerPrestamo);
+
+// ✏️ Actualizar un préstamo existente
+// Validaciones incluidas antes de llegar al controlador
+router.put('/:id', authMiddleware, validarPrestamo, actualizarPrestamo);
+
+// 🗑️ Eliminar un préstamo por ID
+router.delete('/:id', authMiddleware, eliminarPrestamo);
+
+// ==========================================
+// Exportar router para ser usado en index.js
+// ==========================================
 module.exports = router;
