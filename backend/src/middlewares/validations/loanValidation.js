@@ -1,3 +1,4 @@
+// validations/loanValidations.js
 const { body, validationResult } = require('express-validator');
 
 // Validaciones al crear o actualizar préstamo
@@ -7,8 +8,10 @@ const validarPrestamo = [
         .withMessage('El monto debe ser un número mayor que 0'),
 
     body('reason')
-        .notEmpty()
-        .withMessage('El motivo del préstamo es obligatorio'),
+        .isString()
+        .withMessage('El motivo del préstamo debe ser texto')
+        .isLength({ min: 3, max: 100 })
+        .withMessage('El motivo debe tener entre 3 y 100 caracteres'),
 
     body('startDate')
         .isISO8601()
@@ -25,7 +28,16 @@ const validarPrestamo = [
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-        return res.status(400).json({ errores: errors.array() });
+            return res.status(400).json({
+                error: {
+                    message: 'Error de validación',
+                    code: 'VALIDATION_ERROR',
+                    details: errors.array().map(err => ({
+                        field: err.param,
+                        message: err.msg
+                    }))
+                }
+            });
         }
         next();
     }
