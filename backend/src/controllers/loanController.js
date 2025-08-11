@@ -1,154 +1,85 @@
+// controllers/loanController.js
 const Loan = require('../models/Loan');
-const {
-  calcularTasaDiaria,
-  calcularDias,
-  calcularInteresPerdido,
-  calcularTotalAPagar
-} = require('../utils/loanCalculator');
 
-const tasaEAnual = 0.0925;
-const tasaDiaria = calcularTasaDiaria(tasaEAnual);
-
-// Crear préstamo (ya implementado)
-const crearPrestamo = async (req, res) => {
+// Crear préstamo
+const crearPrestamo = async (req, res, next) => {
   try {
-    const { amount, reason, startDate, endDate, accountBalanceAtLoan, interestExtra = 0 } = req.body;
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ message: 'El monto debe ser mayor a 0' });
-    }
-
-    if (!startDate || isNaN(new Date(startDate))) {
-      return res.status(400).json({ message: 'Fecha de inicio inválida' });
-    }
-
-    if (endDate && isNaN(new Date(endDate))) {
-      return res.status(400).json({ message: 'Fecha de finalización inválida' });
-    }
-
-    if (endDate && new Date(endDate) < new Date(startDate)) {
-      return res.status(400).json({ message: 'La fecha de finalización no puede ser anterior a la de inicio' });
-    }
-
-    if (!accountBalanceAtLoan || accountBalanceAtLoan < 0) {
-      return res.status(400).json({ message: 'Debe indicar el saldo de la cuenta (mayor o igual a 0)' });
-    }
-
-    if (interestExtra < 0) {
-      return res.status(400).json({ message: 'El interés extra no puede ser negativo' });
-    }
-
-    const dias = calcularDias(new Date(startDate), new Date(endDate));
-    const interesPerdido = calcularInteresPerdido(amount, dias, tasaDiaria);
-    const totalToPay = calcularTotalAPagar(amount, interesPerdido, interestExtra);
+    const { amount, reason, startDate, endDate } = req.body;
 
     const nuevoPrestamo = new Loan({
       amount,
       reason,
       startDate,
       endDate,
-      accountBalanceAtLoan,
-      interestLost: interesPerdido,
-      interestExtra,
-      totalToPay,
       user: req.user.id
     });
 
-    await nuevoPrestamo.save();
-    res.status(201).json(nuevoPrestamo);
+    const prestamoGuardado = await nuevoPrestamo.save();
+    res.status(201).json(prestamoGuardado);
   } catch (error) {
-    console.error('Error al crear préstamo:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    next(error);
   }
 };
 
-// Obtener todos los préstamos del usuario con filtros, ordenamiento y paginación
-const obtenerPrestamos = async (req, res) => {
+// Obtener todos los préstamos con filtros, búsqueda, orden y paginación
+const obtenerPrestamos = async (req, res, next) => {
   try {
-    const {
-      startDateFrom,
-      startDateTo,
-      reason,
-      minAmount,
-      maxAmount,
-      sortBy,
-      order,
-      page = 1,
-      limit = 10
-    } = req.query;
+    const { estado, search, sortBy, sortOrder, page = 1, limit = 10 } = req.query;
 
     const query = { user: req.user.id };
 
-    // Filtros
-    if (startDateFrom || startDateTo) {
-      query.startDate = {};
-      if (startDateFrom) query.startDate.$gte = new Date(startDateFrom);
-      if (startDateTo) query.startDate.$lte = new Date(startDateTo);
-    }
+    // Filtro por estado
+    if (estado) query.status = estado;
 
-    if (reason) {
-      query.reason = { $regex: reason, $options: 'i' };
-    }
-
-    if (minAmount || maxAmount) {
-      query.amount = {};
-      if (minAmount) query.amount.$gte = Number(minAmount);
-      if (maxAmount) query.amount.$lte = Number(maxAmount);
-    }
-
-    if (req.query.isActive !== undefined) {
-      const now = new Date();
-      const isActive = req.query.isActive === 'true';
-      query.endDate = isActive ? { $gte: now } : { $lt: now };
-    }
+    // Búsqueda por motivo (insensible a mayúsculas)
+    if (search) query.reason = { $regex: search, $options: 'i' };
 
     // Ordenamiento
-    const allowedSortFields = ['amount', 'startDate', 'endDate', 'createdAt', 'totalToPay'];
-    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
-    const sortOrder = order === 'asc' ? 1 : -1;
+    const sort = {};
+    if (sortBy) {
+      sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    } else {
+      sort.createdAt = -1;
+    }
 
     // Paginación
-    const pageNumber = parseInt(page);
-    const pageSize = parseInt(limit);
-    const skip = (pageNumber - 1) * pageSize;
-
-    // Obtener total para info de paginación
-    const total = await Loan.countDocuments(query);
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const prestamos = await Loan.find(query)
-      .sort({ [sortField]: sortOrder })
+      .sort(sort)
       .skip(skip)
-      .limit(pageSize);
+      .limit(parseInt(limit));
+
+    const total = await Loan.countDocuments(query);
 
     res.json({
       total,
-      page: pageNumber,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limit),
       prestamos
     });
   } catch (error) {
-    console.error('Error al obtener préstamos:', error);
-    res.status(500).json({ message: 'Error al obtener préstamos' });
+    next(error);
   }
 };
 
-// Obtener un solo préstamo por ID
-const obtenerPrestamo = async (req, res) => {
+// Obtener préstamo por ID
+const obtenerPrestamo = async (req, res, next) => {
   try {
     const prestamo = await Loan.findOne({ _id: req.params.id, user: req.user.id });
     if (!prestamo) {
-      return res.status(404).json({ message: 'Préstamo no encontrado' });
+      const err = new Error('Préstamo no encontrado');
+      err.statusCode = 404;
+      return next(err);
     }
     res.json(prestamo);
   } catch (error) {
-    console.error('Error al obtener préstamo:', error);
-    res.status(500).json({ message: 'Error al obtener préstamo' });
+    next(error);
   }
 };
 
-// Actualizar un préstamo
-const actualizarPrestamo = async (req, res) => {
+// Actualizar préstamo
+const actualizarPrestamo = async (req, res, next) => {
   try {
     const prestamo = await Loan.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },
@@ -157,68 +88,53 @@ const actualizarPrestamo = async (req, res) => {
     );
 
     if (!prestamo) {
-      const error = new Error('Préstamo no encontrado');
-      error.statusCode = 404;
-      throw error;
+      const err = new Error('Préstamo no encontrado');
+      err.statusCode = 404;
+      return next(err);
     }
 
     res.json(prestamo);
   } catch (error) {
-    console.error('Error al actualizar préstamo:', error);
-    res.status(500).json({ message: 'Error al actualizar préstamo' });
+    next(error);
   }
 };
 
-// Eliminar un préstamo
-const eliminarPrestamo = async (req, res) => {
+// Eliminar préstamo
+const eliminarPrestamo = async (req, res, next) => {
   try {
     const prestamo = await Loan.findOneAndDelete({ _id: req.params.id, user: req.user.id });
 
     if (!prestamo) {
-      return res.status(404).json({ message: 'Préstamo no encontrado' });
+      const err = new Error('Préstamo no encontrado');
+      err.statusCode = 404;
+      return next(err);
     }
 
     res.json({ message: 'Préstamo eliminado correctamente' });
   } catch (error) {
-    console.error('Error al eliminar préstamo:', error);
-    res.status(500).json({ message: 'Error al eliminar préstamo' });
+    next(error);
   }
 };
 
-// Estadísticas de prestamos
-const obtenerEstadisticasPrestamos = async (req, res) => {
+// Estadísticas
+const obtenerEstadisticas = async (req, res, next) => {
   try {
-    const stats = await Loan.aggregate([
-      { $match: { user: req.user._id } },
+    const estadisticas = await Loan.aggregate([
+      { $match: { user: req.user.id } },
       {
         $group: {
-          _id: null,
-          totalLoans: { $sum: 1 },
-          totalAmount: { $sum: '$amount' },
-          totalInterestLost: { $sum: '$interestLost' },
-          totalInterestExtra: { $sum: '$interestExtra' },
-          totalToPay: { $sum: '$totalToPay' }
+          _id: '$status',
+          totalPrestamos: { $sum: 1 },
+          totalMonto: { $sum: '$amount' }
         }
       }
     ]);
 
-    if (stats.length === 0) {
-      return res.json({
-        totalLoans: 0,
-        totalAmount: 0,
-        totalInterestLost: 0,
-        totalInterestExtra: 0,
-        totalToPay: 0
-      });
-    }
-
-    res.json(stats[0]);
+    res.json(estadisticas);
   } catch (error) {
-    console.error('Error al obtener estadísticas:', error);
-    res.status(500).json({ message: 'Error al obtener estadísticas' });
+    next(error);
   }
 };
-
 
 module.exports = {
   crearPrestamo,
@@ -226,5 +142,5 @@ module.exports = {
   obtenerPrestamo,
   actualizarPrestamo,
   eliminarPrestamo,
-  obtenerEstadisticasPrestamos
+  obtenerEstadisticas
 };

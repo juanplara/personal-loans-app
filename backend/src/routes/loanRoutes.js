@@ -14,7 +14,8 @@ const {
     obtenerPrestamo,
     actualizarPrestamo,
     eliminarPrestamo,
-    obtenerEstadisticasPrestamos
+    obtenerEstadisticasPrestamos,
+    obtenerEstadisticas
 } = require('../controllers/loanController');
 
 const { exportCSV } = require('../controllers/exportController');
@@ -29,7 +30,7 @@ const { validarPrestamo } = require('../middlewares/validations/loanValidation')
 
 // 📊 Obtener estadísticas de préstamos del usuario autenticado
 // Ejemplo: GET /api/loans/stats
-router.get('/stats', authMiddleware, obtenerEstadisticasPrestamos);
+router.get('/stats', authMiddleware, obtenerEstadisticas);
 
 // 📂 Exportar préstamos a formato CSV
 // Ejemplo: GET /api/loans/export/csv
