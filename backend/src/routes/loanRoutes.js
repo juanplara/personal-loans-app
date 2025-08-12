@@ -39,7 +39,7 @@ const { validarPrestamo } = require('../middlewares/validations/loanValidation')
 // Ejemplo: GET /api/loans/stats
 /**
  * @swagger
- * /loans/stats:
+ * /api/loans/stats:
  *   get:
  *     summary: Obtener estadísticas de préstamos del usuario autenticado
  *     tags: [Préstamos]
@@ -55,7 +55,7 @@ router.get('/stats', authMiddleware, obtenerEstadisticas);
 // Ejemplo: GET /api/loans/export/csv
 /**
  * @swagger
- * /loans/export/csv:
+ * /api/loans/export/csv:
  *   get:
  *     summary: Exportar préstamos en formato CSV
  *     tags: [Préstamos]
@@ -75,7 +75,7 @@ router.get('/export/csv', authMiddleware, exportCSV);
 // Validaciones incluidas antes de llegar al controlador
 /**
  * @swagger
- * /loans:
+ * /api/loans:
  *   post:
  *     summary: Crear un nuevo préstamo
  *     tags: [Préstamos]
@@ -96,7 +96,7 @@ router.post('/', authMiddleware, validarPrestamo, crearPrestamo);
 // 📋 Obtener todos los préstamos del usuario autenticado
 /**
  * @swagger
- * /loans:
+ * /api/loans:
  *   get:
  *     summary: Obtener todos los préstamos del usuario autenticado
  *     tags: [Préstamos]
@@ -111,7 +111,7 @@ router.get('/', authMiddleware, obtenerPrestamos);
 // 🔍 Obtener un préstamo específico por ID
 /**
  * @swagger
- * /loans/{id}:
+ * /api/loans/{id}:
  *   get:
  *     summary: Obtener un préstamo por ID
  *     tags: [Préstamos]
@@ -134,7 +134,7 @@ router.get('/:id', authMiddleware, obtenerPrestamo);
 // Validaciones incluidas antes de llegar al controlador
 /**
  * @swagger
- * /loans/{id}:
+ * /api/loans/{id}:
  *   put:
  *     summary: Actualizar un préstamo existente
  *     tags: [Préstamos]
@@ -162,7 +162,7 @@ router.put('/:id', authMiddleware, validarPrestamo, actualizarPrestamo);
 // 🗑️ Eliminar un préstamo por ID
 /**
  * @swagger
- * /loans/{id}:
+ * /api/loans/{id}:
  *   delete:
  *     summary: Eliminar un préstamo
  *     tags: [Préstamos]
