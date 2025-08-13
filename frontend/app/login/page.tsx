@@ -1,81 +1,61 @@
-// app/login/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-    const router = useRouter();
     const { login } = useAuth();
+    const router = useRouter();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
-    async function handleLogin(e: React.FormEvent) {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
 
-        try {
-        await login(email, password);
-        router.push('/dashboard'); // Cambiamos el redirect a una página protegida
-        } catch (err: any) {
-        setError(err.response?.data?.message || 'Error en el inicio de sesión');
-        } finally {
-        setLoading(false);
+        // 🔹 Llamada a tu API de login
+        const res = await fetch('http://localhost:5000/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+
+            // ✅ Guardar token y usuario usando tu contexto
+            login(data.user, data.token); 
+
+            // ✅ Guardar el email manualmente para usarlo en el Dashboard
+            // Esto asegura que el Dashboard pueda leerlo aunque el AuthContext no lo haga
+            localStorage.setItem("email", email);
+
+            // Redirigir al Dashboard
+            router.push('/dashboard');
+        } else {
+            alert('Credenciales incorrectas');
         }
-    }
+    };
 
     return (
-        <div style={{
-        maxWidth: 400,
-        margin: '50px auto',
-        padding: 20,
-        border: '1px solid #ccc',
-        borderRadius: 8
-        }}>
-        <h2>Iniciar sesión</h2>
-        <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: 12 }}>
-            <label>Email</label>
-            <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={{ width: '100%', padding: 8 }}
-            />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-            <label>Contraseña</label>
-            <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{ width: '100%', padding: 8 }}
-            />
-            </div>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            <button
-            type="submit"
-            disabled={loading}
-            style={{
-                width: '100%',
-                padding: 10,
-                backgroundColor: '#0070f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer'
-            }}
-            >
-            {loading ? 'Iniciando...' : 'Iniciar sesión'}
-            </button>
-        </form>
+        <div>
+            <h1>Iniciar sesión</h1>
+            <form onSubmit={handleSubmit}>
+                <input
+                    type="email"
+                    placeholder="Correo"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                />
+                <input
+                    type="password"
+                    placeholder="Contraseña"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                <button type="submit">Entrar</button>
+            </form>
         </div>
     );
 }
