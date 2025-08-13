@@ -2,11 +2,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { login } = useAuth();
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -18,13 +20,8 @@ export default function LoginPage() {
         setError(null);
 
         try {
-        const res = await api.post('/auth/login', { email, password });
-
-        // Guardar token en localStorage
-        localStorage.setItem('token', res.data.token);
-
-        // Redirigir a la página principal
-        router.push('/');
+        await login(email, password);
+        router.push('/dashboard'); // Cambiamos el redirect a una página protegida
         } catch (err: any) {
         setError(err.response?.data?.message || 'Error en el inicio de sesión');
         } finally {
@@ -33,7 +30,13 @@ export default function LoginPage() {
     }
 
     return (
-        <div style={{ maxWidth: 400, margin: '50px auto', padding: 20, border: '1px solid #ccc', borderRadius: 8 }}>
+        <div style={{
+        maxWidth: 400,
+        margin: '50px auto',
+        padding: 20,
+        border: '1px solid #ccc',
+        borderRadius: 8
+        }}>
         <h2>Iniciar sesión</h2>
         <form onSubmit={handleLogin}>
             <div style={{ marginBottom: 12 }}>
