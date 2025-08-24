@@ -60,17 +60,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = React.useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
+        const token = Cookies.get('token') || localStorage.getItem('token')
+        const user = localStorage.getItem('user')
 
         if (token && user) {
-        dispatch({
+            dispatch({
             type: 'LOGIN',
             payload: { user: JSON.parse(user), token },
-        });
+            })
         }
-        setIsLoading(false);
-    }, []);
+        setIsLoading(false)
+    }, [])
+
 
     const login = (user: User, token: string) => {
         localStorage.setItem('token', token);
