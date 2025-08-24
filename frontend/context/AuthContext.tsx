@@ -2,6 +2,7 @@
 
 import React, { createContext, useReducer, useContext, useEffect, ReactNode } from 'react';
 import Cookies from 'js-cookie';
+import jwtDecode from 'jwt-decode'; // npm install jwt-decode
 
 interface User {
     id: string;
@@ -60,23 +61,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = React.useState(true);
 
     useEffect(() => {
-        const token = Cookies.get('token') || localStorage.getItem('token')
-        const user = localStorage.getItem('user')
+        const token = Cookies.get('token') || localStorage.getItem('token');
+        const user = localStorage.getItem('user');
 
         if (token && user) {
+        try {
+            // 🔹 Validar expiración del token
+            const decoded: any = jwtDecode(token);
+            if (decoded.exp * 1000 < Date.now()) {
+            logout();
+            } else {
             dispatch({
-            type: 'LOGIN',
-            payload: { user: JSON.parse(user), token },
-            })
+                type: 'LOGIN',
+                payload: { user: JSON.parse(user), token },
+            });
+            }
+        } catch {
+            logout();
         }
-        setIsLoading(false)
-    }, [])
-
+        }
+        setIsLoading(false);
+    }, []);
 
     const login = (user: User, token: string) => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-        Cookies.set('token', token); // Para que el middleware lo pueda leer
+        Cookies.set('token', token); // 🔹 usado por middleware
         dispatch({ type: 'LOGIN', payload: { user, token } });
     };
 
@@ -91,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <AuthContext.Provider value={{ state, isLoading, login, logout }}>
         {children}
         </AuthContext.Provider>
-    );                                        
+    );
 }
 
 export function useAuth() {
