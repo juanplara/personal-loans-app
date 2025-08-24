@@ -33,6 +33,11 @@ const loanSchema = new mongoose.Schema({
   totalToPay: {
     type: Number
   },
+  status: {
+    type: String,
+    enum: ['pendiente', 'pagado', 'atrasado'],
+    default: 'pendiente'
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

@@ -4,13 +4,14 @@ const Loan = require('../models/Loan');
 // Crear préstamo
 const crearPrestamo = async (req, res, next) => {
   try {
-    const { amount, reason, startDate, endDate } = req.body;
+    const { amount, reason, startDate, endDate, accountBalanceAtLoan } = req.body;
 
     const nuevoPrestamo = new Loan({
       amount,
       reason,
       startDate,
       endDate,
+      accountBalanceAtLoan,
       user: req.user.id
     });
 
